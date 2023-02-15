@@ -1,4 +1,4 @@
-using System.Collections;
+using System. Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,33 +28,26 @@ public class OrbManager : MonoBehaviour
         
     }
 
-    public void TouchOrb(){
-        // Pointer Enter時の条件を指定している
-        // 左クリックを押下しながらPointer Enterしていない場合抜ける
-        if(Input.GetMouseButton(0) == false){
-            return;
-        }
-        
+    public void FlyOrb(){
         RectTransform rect = GetComponent<RectTransform>();
         
-        // orbの軌跡
+
         Vector3[] path = {
-            new Vector3(rect.localPosition.x * 1.5f, 300f, 0f), //中間点
-            new Vector3(0f, 150f, 0f), //終点
+            new Vector3(rect.localPosition.x * 4.0f, 300f, 0f),
+            new Vector3(0f, 250f, 0f),
         };
         
-        // DOTweenによる移動
         rect.DOLocalPath(path, 0.5f, PathType.CatmullRom)
             .SetEase(Ease.OutQuad)
             .OnComplete(AddOrbPoint);
         
-        // DOTweenによるサイズ変更
         rect.DOScale(
             new Vector3(0.5f, 0.5f, 0f),
             0.5f
         );
-        
+
     }
+
     
     void AddOrbPoint(){
         switch(orbKind){
@@ -87,4 +80,5 @@ public class OrbManager : MonoBehaviour
                 break;
         }
     }
+    
 }

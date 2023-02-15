@@ -8,8 +8,8 @@ using System;
 
 public class GameManager : MonoBehaviour
 {
-    private const int MAX_ORB = 10;
-    private const int RESPAWN_TIME = 5;
+    private const int MAX_ORB = 30;
+    private const int RESPAWN_TIME = 30;
     private const int MAX_LEVEL = 2;
     
     private const string KEY_SCORE = "SCORE";
@@ -39,22 +39,18 @@ public class GameManager : MonoBehaviour
 
     private DateTime lastDateTime;
     
-    private int[] nextScoreTable = new int[] {10, 100, 1000};
+    private int[] nextScoreTable = new int[] {100, 1000, 10000};
 
     private AudioSource audioSource;
+    
+    private int numOfOrb;
 
     void Start()
     {
         audioSource = this.gameObject.GetComponent<AudioSource>();
 
-        LoadGameData();
-
-        for(int i = 0; i < currentOrb; i++) {
-            CreateOrb();
-        }
-
-        LoadGameTime();
-
+        score = PlayerPrefs.GetInt(KEY_SCORE, 0);
+        templeLevel = PlayerPrefs.GetInt(KEY_LEVEL, 0);
         
         // 初期設定
         nextScore = nextScoreTable[templeLevel];
@@ -66,18 +62,37 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        if(currentOrb < MAX_ORB){
-            // TimeSpanは時間を表す 00:00:27.0544630 の形式
-            // deltaを保持できる
-            TimeSpan timeSpan = DateTime.UtcNow - lastDateTime;
+        while(numOfOrb > 0){
+            // 指定秒後に実行　メソッド名は文字列
+            Invoke("CreateNewOrb", 0.1f * numOfOrb);
+            numOfOrb--;
+        }
+    }
+    
+    private void OnApplicationPause(bool pauseStatus) {
+        if(pauseStatus){
+
+        } else {
+            string time = PlayerPrefs.GetString(KEY_TIME, "");
+            if(time == ""){
+                lastDateTime = DateTime.UtcNow;
+            } else {
+                long temp = Convert.ToInt64(time);
+                lastDateTime = DateTime.FromBinary(temp);
+            }
             
-            // FromSeconds doubleを受け取ってTimeSpan化する
+            numOfOrb = 0;
+            
+            TimeSpan timeSpan = DateTime.UtcNow - lastDateTime;
             if(timeSpan >= TimeSpan.FromSeconds(RESPAWN_TIME)){
-                while(timeSpan >= TimeSpan.FromSeconds(RESPAWN_TIME)){
-                    CreateNewOrb();
+                while(timeSpan > TimeSpan.FromSeconds(RESPAWN_TIME)){
+                    if(numOfOrb < MAX_ORB){
+                        numOfOrb++;
+                    }
                     timeSpan -= TimeSpan.FromSeconds(RESPAWN_TIME);
                 }
             }
+
         }
     }
     
@@ -96,8 +111,8 @@ public class GameManager : MonoBehaviour
         GameObject orb = (GameObject)Instantiate(orbPrefab);
         orb.transform.SetParent(canvasGame.transform, false);
         orb.transform.localPosition = new Vector3(
-            UnityEngine.Random.Range(-300.0f, 300.0f),
-            UnityEngine.Random.Range(-140.0f, -500.0f),
+            UnityEngine.Random.Range(-100.0f, 100.0f),
+            UnityEngine.Random.Range(-300.0f, -450.0f),
             0f);
         
         int kind = UnityEngine.Random.Range(0, templeLevel + 1);
@@ -112,17 +127,27 @@ public class GameManager : MonoBehaviour
                 orb.GetComponent<OrbManager>().SetKind(OrbManager.ORB_KIND.PURPLE);
                 break;
         }
-    }
-    
-    public void GetOrb(int getScore){
-        audioSource.PlayOneShot(getScoreSE);
         
+        orb.GetComponent<OrbManager>().FlyOrb();
+
+        audioSource.PlayOneShot(getScoreSE);
         AnimatorStateInfo stateInfo = imageMokugyo.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0);
         if(stateInfo.fullPathHash == Animator.StringToHash("Base Layer.get@ImageMokugyo")){
             imageMokugyo.GetComponent<Animator>().Play(stateInfo.fullPathHash, 0, 0.0f);
         } else {
             imageMokugyo.GetComponent<Animator>().SetTrigger("isGetScore");
         }
+    }
+    
+    public void GetOrb(int getScore){
+        // audioSource.PlayOneShot(getScoreSE);
+        
+        // AnimatorStateInfo stateInfo = imageMokugyo.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0);
+        // if(stateInfo.fullPathHash == Animator.StringToHash("Base Layer.get@ImageMokugyo")){
+        //     imageMokugyo.GetComponent<Animator>().Play(stateInfo.fullPathHash, 0, 0.0f);
+        // } else {
+        //     imageMokugyo.GetComponent<Animator>().SetTrigger("isGetScore");
+        // }
 
         if(score < nextScore){
             score += getScore;
@@ -190,19 +215,9 @@ public class GameManager : MonoBehaviour
         PlayerPrefs.Save();
     }
     
-    void LoadGameData(){
-        score = PlayerPrefs.GetInt(KEY_SCORE, 0);
-        templeLevel = PlayerPrefs.GetInt(KEY_LEVEL, 0);
-        currentOrb = PlayerPrefs.GetInt(KEY_ORB, 10);
+    public void ResetScore(){
+        PlayerPrefs.DeleteAll();
+        Application.Quit();
     }
-    
-    void LoadGameTime(){
-        string time = PlayerPrefs.GetString(KEY_TIME, "");
-        if(time == ""){
-            lastDateTime = DateTime.UtcNow;
-        } else {
-            long temp = Convert.ToInt64(time);
-            lastDateTime = DateTime.FromBinary(temp);
-        }
-    }
+
 }
